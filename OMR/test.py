@@ -4,7 +4,7 @@ import testutil as utils
 
 answer = [2, 1, 3, 1, 1, 1, 1, 4, 3, 2, 1, 1, 2, 3, 1, 1, 1, 2, 1, 2, 3, 2, 0, 2, 1, 2, 4, 0, 2, 1]
 
-path = 'assets/t4.jpeg'  
+path = 'assets/kunci1.jpeg'  
 img = cv2.imread(path)
 img = cv2.resize(img, (700, 700))
 
@@ -26,7 +26,7 @@ cv2.destroyAllWindows()
 
 #FIND Rectangle
 rectCon = utils.rectContour(contours)
-bigContour = utils.getCornerPoints(rectCon[0])
+bigContour = utils.getCornerPoints(rectCon[1])
 #print(bigContour.shape)
 
 if bigContour.size != 0:
