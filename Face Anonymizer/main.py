@@ -1,65 +1,151 @@
 import cv2
-import mediapipe as mp
-import argparse
-import os
+import numpy as np
+import utlis
 
-def proses_image(img, face_detection):
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    results = face_detection.process(img_rgb)
+########################################################################
+webCamFeed = True
+pathImage = "Assets/test1.jpeg"
+cap = cv2.VideoCapture(0)
+cap.set(10, 160)
+heightImg = 700
+widthImg = 700
+questions = 5
+choices = 5
+ans = [1, 2, 0, 2, 4]
+########################################################################
 
-    if results.detections is not None:
-        for detection in results.detections:
-            bbox = detection.location_data.relative_bounding_box
-            ih, iw, _ = img.shape
-            x, y, w, h = int(bbox.xmin * iw), int(bbox.ymin * ih), int(bbox.width * iw), int(bbox.height * ih)
-            
-            # Blur face
-            face = img[y:y+h, x:x+w]
-            face = cv2.GaussianBlur(face, (99, 99), 30)
-            img[y:y+h, x:x+w] = face
+count = 0
 
-    return img
-
-def process_image_file(image_path, face_detection):
-    img = cv2.imread(image_path)
-    img = proses_image(img, face_detection)
-    output_dir = 'output'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    cv2.imwrite(f'{output_dir}/face_anonymized.jpg', img)
-    cv2.imshow('Face Detection', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-def process_webcam(face_detection):
-    cap = cv2.VideoCapture(0)
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
+while True:
+    if webCamFeed:
+        success, img = cap.read()
+        if not success:
+            print("Gagal membaca frame dari kamera")
             break
-        frame = proses_image(frame, face_detection)
-        cv2.imshow('Face Detection', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+    else:
+        img = cv2.imread(pathImage)
+        if img is None:
+            print(f"Gagal membaca gambar dari path: {pathImage}")
             break
-    cap.release()
-    cv2.destroyAllWindows()
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Face Anonymizer')
-    parser.add_argument('--image', type=str, help='Path to the image file')
-    parser.add_argument('--webcam', action='store_true', help='Use webcam for real-time face anonymization')
-    args = parser.parse_args()
+    img = cv2.resize(img, (widthImg, heightImg))  # RESIZE IMAGE
+    imgFinal = img.copy()
+    imgBlank = np.zeros((heightImg, widthImg, 3), np.uint8)  # CREATE A BLANK IMAGE FOR TESTING DEBUGGING IF REQUIRED
+    imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # CONVERT IMAGE TO GRAY SCALE
+    imgBlur = cv2.GaussianBlur(imgGray, (5, 5), 1)  # ADD GAUSSIAN BLUR
+    imgCanny = cv2.Canny(imgBlur, 10, 70)  # APPLY CANNY
 
-    mp_face_detection = mp.solutions.face_detection
+    try:
+        ## FIND ALL COUNTOURS
+        imgContours = img.copy()  # COPY IMAGE FOR DISPLAY PURPOSES
+        imgBigContour = img.copy()  # COPY IMAGE FOR DISPLAY PURPOSES
+        contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # FIND ALL CONTOURS
+        cv2.drawContours(imgContours, contours, -1, (0, 255, 0), 10)  # DRAW ALL DETECTED CONTOURS
+        rectCon = utlis.rectContour(contours)  # FILTER FOR RECTANGLE CONTOURS
+        biggestPoints = utlis.getCornerPoints(rectCon[0])  # GET CORNER POINTS OF THE BIGGEST RECTANGLE
+        gradePoints = utlis.getCornerPoints(rectCon[1])  # GET CORNER POINTS OF THE SECOND BIGGEST RECTANGLE
 
-    with mp_face_detection.FaceDetection(
-            model_selection=0, 
-            min_detection_confidence=0.5
-        ) as face_detection:
-        
-        if args.webcam:
-            process_webcam(face_detection)
-        elif args.image:
-            process_image_file(args.image, face_detection)
-        else:
-            print("Please provide an image file path with --image or use --webcam for real-time face anonymization.")
+        if biggestPoints.size != 0 and gradePoints.size != 0:
+            # BIGGEST RECTANGLE WARPING
+            biggestPoints = utlis.reorder(biggestPoints)  # REORDER FOR WARPING
+            cv2.drawContours(imgBigContour, biggestPoints, -1, (0, 255, 0), 20)  # DRAW THE BIGGEST CONTOUR
+            pts1 = np.float32(biggestPoints)  # PREPARE POINTS FOR WARP
+            pts2 = np.float32([[0, 0], [widthImg, 0], [0, heightImg], [widthImg, heightImg]])  # PREPARE POINTS FOR WARP
+            matrix = cv2.getPerspectiveTransform(pts1, pts2)  # GET TRANSFORMATION MATRIX
+            imgWarpColored = cv2.warpPerspective(img, matrix, (widthImg, heightImg))  # APPLY WARP PERSPECTIVE
+
+            # SECOND BIGGEST RECTANGLE WARPING
+            cv2.drawContours(imgBigContour, gradePoints, -1, (255, 0, 0), 20)  # DRAW THE BIGGEST CONTOUR
+            gradePoints = utlis.reorder(gradePoints)  # REORDER FOR WARPING
+            ptsG1 = np.float32(gradePoints)  # PREPARE POINTS FOR WARP
+            ptsG2 = np.float32([[0, 0], [325, 0], [0, 150], [325, 150]])  # PREPARE POINTS FOR WARP
+            matrixG = cv2.getPerspectiveTransform(ptsG1, ptsG2)  # GET TRANSFORMATION MATRIX
+            imgGradeDisplay = cv2.warpPerspective(img, matrixG, (325, 150))  # APPLY WARP PERSPECTIVE
+
+            # APPLY THRESHOLD
+            imgWarpGray = cv2.cvtColor(imgWarpColored, cv2.COLOR_BGR2GRAY)  # CONVERT TO GRAYSCALE
+            imgThresh = cv2.threshold(imgWarpGray, 170, 255, cv2.THRESH_BINARY_INV)[1]  # APPLY THRESHOLD AND INVERSE
+
+            boxes = utlis.splitBoxes(imgThresh)  # GET INDIVIDUAL BOXES
+            cv2.imshow("Split Test ", boxes[3])
+            countR = 0
+            countC = 0
+            myPixelVal = np.zeros((questions, choices))  # TO STORE THE NON ZERO VALUES OF EACH BOX
+            for image in boxes:
+                # cv2.imshow(str(countR)+str(countC),image)
+                totalPixels = cv2.countNonZero(image)
+                myPixelVal[countR][countC] = totalPixels
+                countC += 1
+                if countC == choices:
+                    countC = 0
+                    countR += 1
+
+            # FIND THE USER ANSWERS AND PUT THEM IN A LIST
+            myIndex = []
+            for x in range(0, questions):
+                arr = myPixelVal[x]
+                myIndexVal = np.where(arr == np.amax(arr))
+                myIndex.append(myIndexVal[0][0])
+            # print("USER ANSWERS",myIndex)
+
+            # COMPARE THE VALUES TO FIND THE CORRECT ANSWERS
+            grading = []
+            for x in range(0, questions):
+                if ans[x] == myIndex[x]:
+                    grading.append(1)
+                else:
+                    grading.append(0)
+            # print("GRADING",grading)
+            score = (sum(grading) / questions) * 100  # FINAL GRADE
+            # print("SCORE",score)
+
+            # DISPLAYING ANSWERS
+            utlis.showAnswers(imgWarpColored, myIndex, grading, ans)  # DRAW DETECTED ANSWERS
+            utlis.drawGrid(imgWarpColored)  # DRAW GRID
+            imgRawDrawings = np.zeros_like(imgWarpColored)  # NEW BLANK IMAGE WITH WARP IMAGE SIZE
+            utlis.showAnswers(imgRawDrawings, myIndex, grading, ans)  # DRAW ON NEW IMAGE
+            invMatrix = cv2.getPerspectiveTransform(pts2, pts1)  # INVERSE TRANSFORMATION MATRIX
+            imgInvWarp = cv2.warpPerspective(imgRawDrawings, invMatrix, (widthImg, heightImg))  # INV IMAGE WARP
+
+            # DISPLAY GRADE
+            imgRawGrade = np.zeros_like(imgGradeDisplay, np.uint8)  # NEW BLANK IMAGE WITH GRADE AREA SIZE
+            cv2.putText(imgRawGrade, str(int(score)) + "%", (70, 100)
+                        , cv2.FONT_HERSHEY_COMPLEX, 3, (0, 255, 255), 3)  # ADD THE GRADE TO NEW IMAGE
+            invMatrixG = cv2.getPerspectiveTransform(ptsG2, ptsG1)  # INVERSE TRANSFORMATION MATRIX
+            imgInvGradeDisplay = cv2.warpPerspective(imgRawGrade, invMatrixG, (widthImg, heightImg))  # INV IMAGE WARP
+
+            # SHOW ANSWERS AND GRADE ON FINAL IMAGE
+            imgFinal = cv2.addWeighted(imgFinal, 1, imgInvWarp, 1, 0)
+            imgFinal = cv2.addWeighted(imgFinal, 1, imgInvGradeDisplay, 1, 0)
+
+            # IMAGE ARRAY FOR DISPLAY
+            imageArray = ([img, imgGray, imgCanny, imgContours],
+                          [imgBigContour, imgThresh, imgWarpColored, imgFinal])
+            cv2.imshow("Final Result", imgFinal)
+    except:
+        imageArray = ([img, imgGray, imgCanny, imgContours],
+                      [imgBlank, imgBlank, imgBlank, imgBlank])
+
+    # LABELS FOR DISPLAY
+    labels = [["Original", "Gray", "Edges", "Contours"],
+              ["Biggest Contour", "Threshold", "Warped", "Final"]]
+
+    stackedImage = utlis.stackImages(imageArray, 0.5, labels)
+    cv2.imshow("Result", stackedImage)
+
+    # SAVE IMAGE WHEN 's' key is pressed
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('s'):
+        cv2.imwrite("Scanned/myImage" + str(count) + ".jpg", imgFinal)
+        cv2.rectangle(stackedImage, ((int(stackedImage.shape[1] / 2) - 230), int(stackedImage.shape[0] / 2) + 50),
+                      (1100, 350), (0, 255, 0), cv2.FILLED)
+        cv2.putText(stackedImage, "Scan Saved", (int(stackedImage.shape[1] / 2) - 200, int(stackedImage.shape[0] / 2)),
+                    cv2.FONT_HERSHEY_DUPLEX, 3, (0, 0, 255), 5, cv2.LINE_AA)
+        cv2.imshow('Result', stackedImage)
+        cv2.waitKey(300)
+        count += 1
+    elif key == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
