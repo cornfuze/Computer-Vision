@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globe 3D Imersif</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.118/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.118/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <script type="module" src="./mediapipe_local/vision_bundle.mjs" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="appContainer">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="outputCanvas"></canvas>
+        <div id="cesiumContainer"></div>
+
+        
+        <div id="controlsBar">
+            <button id="webcamButton" disabled>Aktifkan Webcam</button>
+        </div>
+    </div>
+    <script type="module" src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Node.js dependencies
+node_modules/
+
+# Python virtual environment
+.venv/
+venv/
+
+# MediaPipe model artifacts (jika besar dan bisa regenerate)
+*.tflite
+
+# Output files
+*.log
+*.tmp
+
+# VSCode settings
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*

@@ -1,0 +1,94 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0; /* Hapus padding agar bisa full */
+    background-color: #333; /* Latar belakang gelap jika video tidak full cover */
+    color: white; /* Ubah warna teks default agar terlihat */
+    overflow: hidden; /* Hindari scrollbar yang tidak perlu */
+}
+
+/* Kontainer utama untuk semua elemen */
+#appContainer {
+    position: relative; /* Untuk menumpuk elemen di dalamnya */
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Video webcam sebagai lapisan paling bawah */
+#webcam {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Agar video menutupi area tanpa distorsi aspek rasio */
+    z-index: 1; /* Lapisan paling bawah */
+    transform: scaleX(-1); /* Cerminkan video agar seperti cermin (opsional) */
+}
+
+/* Canvas untuk menggambar skeleton tangan, di atas video */
+#outputCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3; /* Di atas Cesium, agar tangan terlihat di depan globe */
+    pointer-events: none; /* Agar tidak menangkap event mouse */
+    transform: scaleX(-1); /* Cerminkan juga jika video dicerminkan */
+}
+
+/* Tombol dan Kontrol UI lainnya (jika ada) */
+#controlsBar { /* Anda mungkin perlu div baru untuk ini di HTML */
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10; /* Di atas segalanya */
+    background-color: rgba(0,0,0,0.5);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+#webcamButton {
+    padding: 10px 15px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+}
+#webcamButton:disabled {
+    background-color: #aaa;
+}
+
+/* Hilangkan elemen UI lama jika tidak diperlukan lagi dengan layout baru */
+h1, .container /* mungkin tidak relevan lagi, atau perlu disesuaikan */ {
+    /* display: none; atau atur ulang posisinya */
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    text-align: center;
+}
+#liveView { /* Tidak digunakan lagi dengan layout baru ini */
+    display: none;
+}
+
+/* style.css */
+
+/* ... (CSS lainnya tetap sama) ... */
+
+/* style.css */
+#cesiumContainer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;  /* Mengisi lebar parent (#appContainer) */
+    height: 100%; /* Mengisi tinggi parent (#appContainer) */
+    z-index: 2;   /* Tetap di atas video, di bawah canvas tangan */
+    background-color: transparent; /* Pastikan transparan agar video di belakang bisa terlihat jika globe tidak menutupi semua */
+    /* Hapus atau pastikan properti pemusatan dan ukuran tetap sudah tidak ada: */
+    /* transform: translate(-50%, -50%); */ /* Tidak perlu lagi */
+}
