@@ -4,7 +4,7 @@ import testutil as utils
 
 answer = [2, 1, 3, 1, 1, 1, 1, 4, 3, 2, 1, 1, 2, 3, 1, 1, 1, 2, 1, 2, 3, 2, 0, 2, 1, 2, 4, 0, 2, 1]
 
-path = 'assets/kunci1.jpeg'  
+path = 'assets/s5.jpeg'  
 img = cv2.imread(path)
 img = cv2.resize(img, (700, 700))
 
@@ -19,6 +19,7 @@ thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.TH
 contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 cv2.drawContours(img, contours, -1, (0, 255, 0), 2)
 
+cv2.imshow("Gray", gray)
 cv2.imshow("tresh",thresh)
 cv2.imshow("Hasil Deteksi Kontur", img)
 cv2.waitKey(0)
@@ -26,7 +27,7 @@ cv2.destroyAllWindows()
 
 #FIND Rectangle
 rectCon = utils.rectContour(contours)
-bigContour = utils.getCornerPoints(rectCon[1])
+bigContour = utils.getCornerPoints(rectCon[0])
 #print(bigContour.shape)
 
 if bigContour.size != 0:
